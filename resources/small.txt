@@ -1,0 +1,12 @@
+Malaga;12.9
+Malaga;32.2
+Zagreb;12.2
+Cabo San Lucas;14.9
+Adelaide;15.0
+Vilnius;25.7
+Pittsburgh;9.7
+Karachi;15.4
+Kyiv;10.0
+Kyiv;30.0
+Dodoma;22.2
+Tauranga;38.2
