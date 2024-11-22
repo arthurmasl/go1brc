@@ -18,30 +18,55 @@ type Data struct {
 	count         int64
 }
 
+type Chunks chan []string
+
 const BUFFER_SIZE = 2048 * 2048
 
 func Execute(file *os.File, rows int) (string, int) {
 	wg := sync.WaitGroup{}
 	mu := sync.Mutex{}
-	data := make(DataMap)
 
 	workers := runtime.GOMAXPROCS(runtime.NumCPU())
 	chunkSize := rows / workers
-	chunks := make(chan []string, workers)
+
+	data := make(DataMap)
+	chunks := make(Chunks, workers)
 
 	fmt.Printf("Workers: %v, Chunk Size: %v\n", workers, chunkSize)
 
+	runWorkers(chunks, workers, &data, &wg, &mu)
+	scanLines(chunks, file, chunkSize)
+
+	wg.Wait()
+
+	result := parseResult(&data)
+	return result, len(data)
+}
+
+func runWorkers(
+	chunks Chunks,
+	workers int,
+	data *DataMap,
+	wg *sync.WaitGroup,
+	mu *sync.Mutex,
+) {
 	for range workers {
 		wg.Add(1)
 
 		go func() {
 			defer wg.Done()
-			for chunk := range chunks {
-				processChunk(chunk, &data, &mu)
-			}
+
+			lines := <-chunks
+			processChunk(lines, data, mu)
 		}()
 	}
+}
 
+func scanLines(
+	chunks Chunks,
+	file *os.File,
+	chunkSize int,
+) {
 	lines := make([]string, 0, chunkSize)
 
 	scanner := bufio.NewScanner(file)
@@ -57,31 +82,19 @@ func Execute(file *os.File, rows int) (string, int) {
 	}
 
 	if len(lines) > 0 {
-		fmt.Printf("Left lines: %v\n", len(lines))
 		chunks <- lines
 	}
 
 	close(chunks)
-	wg.Wait()
-
-	index := 0
-	dataArr := make([]string, len(data))
-
-	for key, value := range data {
-		mean := value.sum / float64(value.count)
-		dataArr[index] = fmt.Sprintf("%v=%.1f/%.1f/%.1f", key, value.min, mean, value.max)
-		index++
-	}
-
-	slices.Sort(dataArr)
-	result := fmt.Sprintf("{%v}", strings.Join(dataArr, ", "))
-
-	return result, len(data)
 }
 
-func processChunk(lines []string, data *DataMap, mu *sync.Mutex) {
-	// mu.Lock()
-	// defer mu.Unlock()
+func processChunk(
+	lines []string,
+	data *DataMap,
+	mu *sync.Mutex,
+) {
+	mu.Lock()
+	defer mu.Unlock()
 
 	for _, line := range lines {
 		parts := strings.Split(line, ";")
@@ -103,4 +116,20 @@ func processChunk(lines []string, data *DataMap, mu *sync.Mutex) {
 			d.count++
 		}
 	}
+}
+
+func parseResult(data *DataMap) string {
+	index := 0
+	dataArr := make([]string, len(*data))
+
+	for key, value := range *data {
+		mean := value.sum / float64(value.count)
+		dataArr[index] = fmt.Sprintf("%v=%.1f/%.1f/%.1f", key, value.min, mean, value.max)
+		index++
+	}
+
+	slices.Sort(dataArr)
+	result := fmt.Sprintf("{%v}", strings.Join(dataArr, ", "))
+
+	return result
 }
