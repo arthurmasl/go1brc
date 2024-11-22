@@ -1,10 +1,11 @@
-package profiler
+package main
 
 import (
-	"go1brc/internal/solution1"
-	"go1brc/internal/solution2"
 	"os"
 	"testing"
+
+	"go1brc/internal/solution1"
+	"go1brc/internal/solution2"
 )
 
 var (

@@ -7,6 +7,7 @@ import (
 
 	"go1brc/internal/solution1"
 	"go1brc/internal/solution2"
+	"go1brc/internal/solution3"
 )
 
 type Solution struct {
@@ -22,12 +23,12 @@ var (
 )
 
 var (
-	SolutionFn   = solution2.Execute
+	SolutionFn   = solution3.Execute
 	SolutionCase = tenmil
 )
 
 func ExecuteSolution(solution Solution) (string, int) {
-	fmt.Fprintln(os.Stdout, []any{solution1.Execute, solution2.Execute}...)
+	fmt.Fprintln(os.Stdout, []any{solution1.Execute, solution2.Execute, solution3.Execute}...)
 
 	file, _ := os.Open(fmt.Sprintf("resources/%v.txt", solution.name))
 	defer file.Close()

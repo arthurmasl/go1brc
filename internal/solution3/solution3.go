@@ -1,4 +1,4 @@
-package solution2
+package solution3
 
 import (
 	"bufio"
@@ -6,7 +6,6 @@ import (
 	"os"
 	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -14,8 +13,8 @@ import (
 type DataMap map[string]*Data
 
 type Data struct {
-	min, max, sum float64
-	count         int64
+	min, max, count int32
+	sum             int64
 }
 
 type Chunks chan []string
@@ -97,22 +96,37 @@ func processChunk(
 	// defer mu.Unlock()
 
 	for _, line := range lines {
-		// parts := strings.Split(line, ";")
-		name, temperature, _ := strings.Cut(line, ";")
-		temp, _ := strconv.ParseFloat(temperature, 64)
+		name, tempStr, _ := strings.Cut(line, ";")
+
+		negative := false
+		index := 0
+		if tempStr[0] == '-' {
+			index++
+			negative = true
+		}
+		temp := int32(tempStr[index] - '0')
+		index++
+		if tempStr[index] != '.' {
+			temp = temp*10 + int32(tempStr[index]-'0')
+		}
+		index++
+		temp = temp*10 + int32(tempStr[index]-'0')
+		if negative {
+			temp = -temp
+		}
 
 		d := (*data)[name]
 		if d == nil {
 			(*data)[name] = &Data{
 				min:   temp,
 				max:   temp,
-				sum:   temp,
+				sum:   int64(temp),
 				count: 1,
 			}
 		} else {
 			d.min = min(d.min, temp)
 			d.max = max(d.min, temp)
-			d.sum += temp
+			d.sum += int64(temp)
 			d.count++
 		}
 	}
@@ -123,8 +137,14 @@ func parseResult(data *DataMap) string {
 	dataArr := make([]string, len(*data))
 
 	for key, value := range *data {
-		mean := value.sum / float64(value.count)
-		dataArr[index] = fmt.Sprintf("%v=%.1f/%.1f/%.1f", key, value.min, mean, value.max)
+		mean := float64(value.sum) / float64(value.count) / 10
+		dataArr[index] = fmt.Sprintf(
+			"%v=%.1f/%.1f/%.1f",
+			key,
+			float64(value.min)/10,
+			mean,
+			float64(value.max)/10,
+		)
 		index++
 	}
 
