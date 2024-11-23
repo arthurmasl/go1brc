@@ -12,7 +12,10 @@ import (
 	"strings"
 )
 
-// type DataMap map[string]*Data
+type Part struct {
+	offset, size int64
+}
+
 type DataMap map[string]Data
 
 type Data struct {
@@ -22,8 +25,7 @@ type Data struct {
 
 func Execute(file *os.File, rows int) (string, int) {
 	workers := runtime.GOMAXPROCS(runtime.NumCPU())
-
-	parts, _ := splitFile(file, workers)
+	parts := splitFile(file, workers)
 
 	resultCh := make(chan DataMap)
 	for _, part := range parts {
@@ -59,18 +61,18 @@ func Execute(file *os.File, rows int) (string, int) {
 }
 
 func processPart(file *os.File, part *Part, ch chan DataMap) {
-	_, err := file.Seek(part.offset, io.SeekStart)
-	if err != nil {
-		panic(err)
-	}
-
-	f := io.LimitReader(file, part.size)
 	data := make(DataMap)
+
+	file.Seek(part.offset, io.SeekStart)
+	f := io.LimitReader(file, part.size)
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
-		name, temperature, _ := strings.Cut(line, ";")
+		name, temperature, found := strings.Cut(line, ";")
+		if !found {
+			continue
+		}
 		temp, _ := strconv.ParseFloat(temperature, 64)
 
 		d, ok := data[name]
@@ -92,46 +94,36 @@ func processPart(file *os.File, part *Part, ch chan DataMap) {
 	ch <- data
 }
 
-type Part struct {
-	offset, size int64
-}
-
-func splitFile(f *os.File, numParts int) ([]Part, error) {
+func splitFile(file *os.File, numParts int) []Part {
 	const maxLineLength = 100
 
-	st, _ := f.Stat()
-	size := st.Size()
-	splitSize := size / int64(numParts)
-
+	parts := make([]Part, 0, numParts)
 	buf := make([]byte, maxLineLength)
-	parts := make([]Part, numParts)
+
+	stat, _ := file.Stat()
+	fileSize := stat.Size()
+	partSize := fileSize / int64(numParts)
 	offset := int64(0)
 
-	for i := 0; i < numParts; i++ {
-		if i == numParts-1 {
-			if offset < size {
-				parts = append(parts, Part{offset, size - offset})
-			}
+	for offset < fileSize {
+		seekOffset := max(offset+partSize-maxLineLength, 0)
+		if seekOffset > fileSize {
 			break
 		}
 
-		seekOffset := max(offset+splitSize-maxLineLength, 0)
-		_, err := f.Seek(seekOffset, io.SeekStart)
-		if err != nil {
-			return nil, err
-		}
-		n, _ := io.ReadFull(f, buf)
+		file.Seek(seekOffset, io.SeekStart)
+		n, _ := io.ReadFull(file, buf)
 		chunk := buf[:n]
+
 		newline := bytes.LastIndexByte(chunk, '\n')
-		if newline < 0 {
-			return nil, fmt.Errorf("newline not found at offset %d", offset+splitSize-maxLineLength)
-		}
 		remaining := len(chunk) - newline - 1
 		nextOffset := seekOffset + int64(len(chunk)) - int64(remaining)
+
 		parts = append(parts, Part{offset, nextOffset - offset})
 		offset = nextOffset
 	}
-	return parts, nil
+
+	return parts
 }
 
 func parseResult(data *DataMap) string {

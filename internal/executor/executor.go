@@ -24,7 +24,7 @@ var (
 
 var (
 	SolutionFn   = solution3.Execute
-	SolutionCase = small
+	SolutionCase = tenmil
 )
 
 func ExecuteSolution(solution Solution) (string, int) {
