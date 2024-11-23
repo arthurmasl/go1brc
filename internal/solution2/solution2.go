@@ -97,7 +97,6 @@ func processChunk(
 	// defer mu.Unlock()
 
 	for _, line := range lines {
-		// parts := strings.Split(line, ";")
 		name, temperature, _ := strings.Cut(line, ";")
 		temp, _ := strconv.ParseFloat(temperature, 64)
 
