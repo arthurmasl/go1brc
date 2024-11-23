@@ -1,16 +1,20 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"os"
 	"runtime/pprof"
 
 	"go1brc/internal/executor"
 )
 
-const PROFILE = true
-
 func main() {
-	if PROFILE {
+	profile := flag.Bool("profile", false, "start profiling")
+	flag.Parse()
+
+	if *profile {
+		fmt.Println("Profiling...")
 		f, err := os.Create("cpu_profile.prof")
 		if err != nil {
 			panic(err)
