@@ -2,11 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
-	"runtime/pprof"
 
 	"go1brc/internal/executor"
+	"go1brc/internal/utils"
 )
 
 func main() {
@@ -14,17 +12,8 @@ func main() {
 	flag.Parse()
 
 	if *profile {
-		fmt.Println("Profiling...")
-		f, err := os.Create("cpu_profile.prof")
-		if err != nil {
-			panic(err)
-		}
-		defer f.Close()
-
-		if err := pprof.StartCPUProfile(f); err != nil {
-			panic(err)
-		}
-		defer pprof.StopCPUProfile()
+		stopProfiling := utils.Profile()
+		defer stopProfiling()
 	}
 
 	executor.ExecuteSolution(executor.SolutionCase)

@@ -3,11 +3,11 @@ package executor
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"go1brc/internal/solution1"
 	"go1brc/internal/solution2"
 	"go1brc/internal/solution3"
+	"go1brc/internal/utils"
 )
 
 type Solution struct {
@@ -23,7 +23,7 @@ var (
 )
 
 var (
-	SolutionFn   = solution3.Execute
+	SolutionFn   = solution2.Execute
 	SolutionCase = tenmil
 )
 
@@ -35,13 +35,12 @@ func ExecuteSolution(solution Solution) (string, int) {
 
 	fmt.Printf("Name: %v, Rows: %v\n", solution.name, solution.rows)
 
-	t1 := time.Now()
+	defer utils.Perf("Execution time:")()
 	str, cities := SolutionFn(file, solution.rows)
 	if cities != solution.cities {
 		fmt.Printf("-Wrong solution!, got %v cities, when expected %v\n", cities, solution.cities)
 	}
 	fmt.Printf("Cities: %v, Expected: %v\n", cities, solution.cities)
-	fmt.Printf("Execution time: %v\n", time.Since(t1))
 
 	return str, cities
 }
